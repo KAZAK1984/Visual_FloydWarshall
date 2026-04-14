@@ -9,10 +9,9 @@
     <Grid>
         <!-- Определения столбцов и строк -->
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="128*" />
-            <ColumnDefinition Width="6*"/>
-            <ColumnDefinition Width="333*" />
-            <ColumnDefinition Width="333*" />
+            <ColumnDefinition Width="0.4*" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
             <RowDefinition Height="*" />
@@ -22,7 +21,7 @@
         <!-- Левая панель инструментов -->
         <StackPanel Grid.Column="0" 
                     Grid.Row="0" 
-                    Background="SeaShell" Grid.ColumnSpan="2">
+                    Background="SeaShell">
             <TextBlock FontWeight="Bold" Margin="5">Инструменты</TextBlock>
             <Button Content="Загрузить граф" Margin="5,11,10,10"/>
             <Button Content="Рассчитать пути" Margin="5,0,10,0"/>
@@ -31,21 +30,22 @@
         <!-- Центральная панель основной отрисовки -->
         <Canvas Grid.Column="1" 
 				Grid.Row="0" 
-				Background="LightGray" Grid.ColumnSpan="3" Margin="6,0,333,0">
+				Background="LightGray">
             <TextBlock Margin="5">Граф (Визуализация)</TextBlock>
         </Canvas>
 
         <!-- Правая панель вторичной отрисовки -->
-        <Canvas Grid.Column="3" 
+        <Canvas Grid.Column="2" 
 				Grid.Row="0" 
 				Background="LightGray">
-            <TextBlock Margin="5">Матрица расстояний D</TextBlock>
+            <TextBlock Margin="11,5">Матрица расстояний D</TextBlock>
         </Canvas>
 
         <!-- Панель хронологии (нижняя) -->
         <DockPanel Grid.Column="0" 
-                   Grid.ColumnSpan="4" 
-                   Background="SeaShell" Margin="0,310,0,0" Grid.RowSpan="2">
+                   Grid.Row="1"
+                   Grid.ColumnSpan="3" 
+                   Background="SeaShell">
             <TextBlock DockPanel.Dock="Top" Margin="5">Хронология шагов (k)</TextBlock>
             <Slider Minimum="0" 
                     Maximum="20" 
@@ -58,17 +58,18 @@
         <Border Grid.Column="0" 
 				Grid.Row="0" 
 				BorderThickness="0,0,3,0" 
-				BorderBrush="DarkGray" Grid.ColumnSpan="2" />
+				BorderBrush="DarkGray"/>
 
         <Border Grid.Column="0" 
-				Grid.ColumnSpan="4"
-				BorderThickness="0,3,0,0" 
-				BorderBrush="DarkGray" Margin="0,310,0,0" Grid.RowSpan="2" />
+                Grid.Row="0"
+                Grid.ColumnSpan="3"
+				BorderThickness="0,0,0,3" 
+				BorderBrush="DarkGray" />
 
         <GridSplitter Grid.Column="2" 
 					  Grid.Row="0"  
 					  Width="6" 
 					  Background="DimGray"
-					  HorizontalAlignment="Left" Grid.ColumnSpan="2" Margin="328,0,0,0" />
+					  HorizontalAlignment="Left"/>
     </Grid>
 </Window>
