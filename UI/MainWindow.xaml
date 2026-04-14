@@ -3,17 +3,17 @@
 		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 		xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 		xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-		xmlns:local="clr-namespace:Visual_FloydWarshall"
+		xmlns:util="clr-namespace:Visual_FloydWarshall.Utility"
 		mc:Ignorable="d"
 		Title="MainWindow" 
-        Height="450" MinHeight="300"
-        Width="800" MinWidth="400">
+		Height="450" MinHeight="300"
+		Width="800" MinWidth="400">
 	<Grid>
 		<Grid.ColumnDefinitions>
 			<ColumnDefinition Width="0.4*" />
-			<ColumnDefinition Width="*" />
-            <ColumnDefinition Width="Auto" />
-            <ColumnDefinition Width="*" />
+			<ColumnDefinition Width="*" MinWidth="100" />
+			<ColumnDefinition Width="Auto" />
+			<ColumnDefinition Width="*" MinWidth="100" />
 		</Grid.ColumnDefinitions>
 		<Grid.RowDefinitions>
 			<RowDefinition Height="*" />
@@ -21,40 +21,43 @@
 		</Grid.RowDefinitions>
 
 		<!-- Левая панель инструментов -->
-        <Border Grid.Column="0" 
+		<Border Grid.Column="0" 
 				Grid.Row="0"
 				BorderBrush="DarkGray" 
 				BorderThickness="0,0,0,3"
 				d:IsLocked="True">
 
-            <Grid x:Name="ToolPanel" 
-                  Background="SeaShell">
+			<Grid x:Name="ToolPanel" 
+				  Background="SeaShell">
 
-                <Grid.RowDefinitions>
-				    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
+				<Grid.RowDefinitions>
+					<RowDefinition Height="Auto"/>
+					<RowDefinition Height="*"/>
+					<RowDefinition Height="*"/>
+				</Grid.RowDefinitions>
 
-                <TextBlock Grid.Row="0" FontWeight="Bold" Margin="5">Инструменты</TextBlock>
+				<TextBlock Grid.Row="0" FontWeight="Bold" Margin="5">Инструменты</TextBlock>
 
-                <Border Grid.Row="1" BorderBrush="Gray" BorderThickness="1" Margin="5">
-                    <StackPanel x:Name="CreatePanel" Background="WhiteSmoke">
-                        <Button x:Name="CreateGraph" Click="CreateGraph_Click" Content="Создать граф" Margin="5"/>
-                        <TextBlock TextWrapping="Wrap" Margin="5">Кол-во вершин создаваемого графа</TextBlock>
-                        <TextBox TextWrapping="Wrap" Text="10" Margin="5,0,5,5" InputScope="Digits"/>
-                    </StackPanel>
-                </Border>
+				<Border Grid.Row="1" BorderBrush="Gray" BorderThickness="1" Margin="5">
+					<StackPanel x:Name="CreatePanel" Background="WhiteSmoke">
+						<Button x:Name="CreateGraph" Click="CreateGraph_Click" Content="Создать граф" Margin="5"/>
+						<TextBlock TextWrapping="Wrap" Margin="5">Кол-во вершин создаваемого графа</TextBlock>
+						<TextBox TextWrapping="Wrap" Text="10" Margin="5,0,5,5" 
+                                 util:TextBoxBehavior.NumericOnly="True"
+                                 util:TextBoxBehavior.MinValue="4"
+                                 util:TextBoxBehavior.MaxValue="40"/>
+					</StackPanel>
+				</Border>
 
-                <Border Grid.Row="2" BorderBrush="Gray" BorderThickness="1" Margin="5">
-                    <StackPanel x:Name="CalculatePanel" Background="WhiteSmoke">
-                        <Button x:Name="CalculatePaths" Content="Рассчитать пути" Margin="5"/>
-                    </StackPanel>
-                </Border>
-            </Grid>
-        </Border>
+				<Border Grid.Row="2" BorderBrush="Gray" BorderThickness="1" Margin="5">
+					<StackPanel x:Name="CalculatePanel" Background="WhiteSmoke">
+						<Button x:Name="CalculatePaths" Content="Рассчитать пути" Margin="5"/>
+					</StackPanel>
+				</Border>
+			</Grid>
+		</Border>
 
-        <!-- Центральная панель основной отрисовки -->
+		<!-- Центральная панель основной отрисовки -->
 		<Border Grid.Column="1" 
 				Grid.Row="0"
 				BorderBrush="DarkGray" 
@@ -68,48 +71,49 @@
 			</Canvas>
 		</Border>
 
-        <!-- Разделители -->
-        <GridSplitter Grid.Column="2" 
-                      Grid.Row="0" 
-                      Width="4"
-                      Background="DimGray"
-                      HorizontalAlignment="Left"
-                      d:IsLocked="True"/>
-        
-        <!-- Правая панель вторичной отрисовки -->
-        <Border Grid.Column="3" 
+		<!-- Разделитель -->
+		<GridSplitter Grid.Column="2" 
+					  Grid.Row="0" 
+					  Width="4"
+					  Background="DimGray"
+					  HorizontalAlignment="Center"
+					  VerticalAlignment="Stretch"
+					  d:IsLocked="True"/>
+		
+		<!-- Правая панель вторичной отрисовки -->
+		<Border Grid.Column="3" 
 				Grid.Row="0"
 				BorderBrush="DarkGray" 
 				BorderThickness="0,0,0,3"
 				d:IsLocked="True">
 
-            <Canvas x:Name="DistanceMatrixCanvas"  
+			<Canvas x:Name="DistanceMatrixCanvas"  
 					Background="LightGray" 
 					d:IsLocked="True">
-                <TextBlock Margin="11">Матрица расстояний D</TextBlock>
-            </Canvas>
-        </Border>
+				<TextBlock Margin="11">Матрица расстояний D</TextBlock>
+			</Canvas>
+		</Border>
 
-        <!-- Панель хронологии (нижняя) -->
-        <Grid x:Name="ChronologyPanel"
-              Grid.Column="0" 
-              Grid.Row="1"
-              Grid.ColumnSpan="4" 
-              Background="SeaShell" 
-              d:IsLocked="True">
+		<!-- Панель хронологии (нижняя) -->
+		<Grid x:Name="ChronologyPanel"
+			  Grid.Column="0" 
+			  Grid.Row="1"
+			  Grid.ColumnSpan="4" 
+			  Background="SeaShell" 
+			  d:IsLocked="True">
 
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
-            </Grid.RowDefinitions>
+			<Grid.RowDefinitions>
+				<RowDefinition Height="Auto"/>
+				<RowDefinition Height="*"/>
+			</Grid.RowDefinitions>
 
-            <TextBlock Grid.Row="0" Margin="5">Хронология шагов (k)</TextBlock>
-            <Slider Grid.Row="1"
+			<TextBlock Grid.Row="0" Margin="5">Хронология шагов (k)</TextBlock>
+			<Slider Grid.Row="1"
 					Minimum="0" 
 					Maximum="20" 
 					TickFrequency="1" 
 					IsSnapToTickEnabled="True" 
 					Margin="10,0"/>
-        </Grid>
-    </Grid>
+		</Grid>
+	</Grid>
 </Window>
