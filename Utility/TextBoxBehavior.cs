@@ -121,8 +121,10 @@ namespace Visual_FloydWarshall.Utility
 			{
 				textBox.PreviewKeyDown += TextBox_PreviewKeyDown;
 				textBox.LostFocus += TextBox_LostFocus;
-				DataObject.AddPastingHandler(textBox, TextBox_Pasting);
 			}
+
+			if (GetNumericOnly(textBox) || GetMinValue(textBox).HasValue || GetMaxValue(textBox).HasValue)
+				DataObject.AddPastingHandler(textBox, TextBox_Pasting);
 		}
 	}
 }
