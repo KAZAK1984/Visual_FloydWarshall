@@ -20,6 +20,11 @@ namespace Visual_FloydWarshall.Algorithm
             var logs = trackIterationChanges
                 ? new List<FloydWarshallIterationLog>(vertexCount)
                 : null;
+            var snapshots = trackIterationChanges
+                ? new List<FloydWarshallSnapshot>(vertexCount + 1)
+                : null;
+
+            snapshots?.Add(new FloydWarshallSnapshot(-1, CloneDistances(distances)));
 
             for (var k = 0; k < vertexCount; k++)
             {
@@ -60,6 +65,8 @@ namespace Visual_FloydWarshall.Algorithm
                 {
                     logs!.Add(new FloydWarshallIterationLog(k, iterationChanges));
                 }
+
+                snapshots?.Add(new FloydWarshallSnapshot(k, CloneDistances(distances)));
             }
 
             var hasNegativeCycle = false;
@@ -76,7 +83,25 @@ namespace Visual_FloydWarshall.Algorithm
                 distances,
                 predecessors,
                 hasNegativeCycle,
-                logs is null ? Array.Empty<FloydWarshallIterationLog>() : logs);
+                logs is null ? Array.Empty<FloydWarshallIterationLog>() : logs,
+                snapshots is null ? Array.Empty<FloydWarshallSnapshot>() : snapshots);
+        }
+
+        private static long[,] CloneDistances(long[,] source)
+        {
+            var size0 = source.GetLength(0);
+            var size1 = source.GetLength(1);
+            var clone = new long[size0, size1];
+
+            for (var i = 0; i < size0; i++)
+            {
+                for (var j = 0; j < size1; j++)
+                {
+                    clone[i, j] = source[i, j];
+                }
+            }
+
+            return clone;
         }
 
         private static void InitializeMatrices(long?[,] adjacencyMatrix, long[,] distances, int[,] predecessors)

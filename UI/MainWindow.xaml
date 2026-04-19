@@ -16,19 +16,29 @@
 			<ColumnDefinition Width="*" MinWidth="100" />
 		</Grid.ColumnDefinitions>
 		<Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
 			<RowDefinition Height="*" />
 			<RowDefinition Height="0.4*" />
 		</Grid.RowDefinitions>
 
+		<Menu Grid.Row="0" Grid.ColumnSpan="4">
+			<MenuItem Header="Файл">
+				<MenuItem Header="Сохранить" Click="SaveMenuItem_Click" />
+				<MenuItem Header="Загрузить" Click="LoadMenuItem_Click" />
+			</MenuItem>
+			<MenuItem Header="Алгоритм">
+				<MenuItem Header="Описание" Click="ShowDescriptionMenuItem_Click" />
+			</MenuItem>
+		</Menu>
+
 		<!-- Левая панель инструментов -->
 		<Border Grid.Column="0" 
-				Grid.Row="0"
+                Grid.Row="1"
 				BorderBrush="DarkGray" 
 				BorderThickness="0,0,0,3"
 				d:IsLocked="True">
 
-			<Grid x:Name="ToolPanel" 
-				  Background="SeaShell">
+			<Grid Background="SeaShell">
 
 				<Grid.RowDefinitions>
 					<RowDefinition Height="Auto"/>
@@ -39,10 +49,12 @@
 				<TextBlock Grid.Row="0" FontWeight="Bold" Margin="5">Инструменты</TextBlock>
 
 				<Border Grid.Row="1" BorderBrush="Gray" BorderThickness="1" Margin="5">
-					<StackPanel x:Name="CreatePanel" Background="WhiteSmoke">
+					<StackPanel Background="WhiteSmoke">
 						<Button x:Name="CreateGraph" Click="CreateGraph_Click" Content="Создать граф" Margin="5"/>
-						<TextBlock TextWrapping="Wrap" Margin="5">Кол-во вершин создаваемого графа</TextBlock>
-						<TextBox TextWrapping="Wrap" Text="10" Margin="5,0,5,5" 
+						
+                        <TextBlock TextWrapping="Wrap" Margin="5">Кол-во вершин создаваемого графа</TextBlock>
+						<TextBox x:Name="VertexCountTextBox"
+                                 TextWrapping="Wrap" Text="10" Margin="5,0,5,5" 
                                  util:TextBoxBehavior.NumericOnly="True"
                                  util:TextBoxBehavior.MinValue="4"
                                  util:TextBoxBehavior.MaxValue="40"/>
@@ -50,22 +62,38 @@
 				</Border>
 
 				<Border Grid.Row="2" BorderBrush="Gray" BorderThickness="1" Margin="5">
-					<StackPanel x:Name="CalculatePanel" Background="WhiteSmoke">
-						<Button x:Name="CalculatePaths" Content="Рассчитать пути" Margin="5"/>
-					</StackPanel>
+					<StackPanel Background="WhiteSmoke">
+						<Button x:Name="CalculatePaths" Click="CalculatePaths_Click" Content="Рассчитать пути" Margin="5"/>
+						<Button Click="ShowDescriptionMenuItem_Click" Content="Описание алгоритма" Margin="5,0,5,5"/>
+						
+                        <TextBlock TextWrapping="Wrap" Margin="5">Узел отсчёта</TextBlock>
+                        <TextBox x:Name="CalculateStartPos"
+                                 TextWrapping="Wrap" Text="0" Margin="5,0,5,5" 
+								 util:TextBoxBehavior.NumericOnly="True"
+                               util:TextBoxBehavior.MinValue="0"
+								 util:TextBoxBehavior.MaxValue="40"/>
+                        
+                        <TextBlock TextWrapping="Wrap" Margin="5">Целевой узел</TextBlock>
+                        <TextBox x:Name="CalculateEndPos"
+                                 TextWrapping="Wrap" Text="1" Margin="5,0,5,5" 
+								 util:TextBoxBehavior.NumericOnly="True"
+                               util:TextBoxBehavior.MinValue="0"
+								 util:TextBoxBehavior.MaxValue="40"/>
+                    </StackPanel>
 				</Border>
 			</Grid>
 		</Border>
 
 		<!-- Центральная панель основной отрисовки -->
 		<Border Grid.Column="1" 
-				Grid.Row="0"
+                Grid.Row="1"
 				BorderBrush="DarkGray" 
 				BorderThickness="3,0,0,3"
 				d:IsLocked="True">
 
-			<Canvas x:Name="GraphCanvas"  
+			<Canvas x:Name="MainCanvas"  
 					Background="LightGray" 
+                  SizeChanged="MainCanvas_SizeChanged"
 					d:IsLocked="True">
 				<TextBlock Margin="5">Граф (Визуализация)</TextBlock>
 			</Canvas>
@@ -73,7 +101,7 @@
 
 		<!-- Разделитель -->
 		<GridSplitter Grid.Column="2" 
-					  Grid.Row="0" 
+                   Grid.Row="1" 
 					  Width="4"
 					  Background="DimGray"
 					  HorizontalAlignment="Center"
@@ -82,38 +110,59 @@
 		
 		<!-- Правая панель вторичной отрисовки -->
 		<Border Grid.Column="3" 
-				Grid.Row="0"
+                Grid.Row="1"
 				BorderBrush="DarkGray" 
 				BorderThickness="0,0,0,3"
 				d:IsLocked="True">
 
-			<Canvas x:Name="DistanceMatrixCanvas"  
-					Background="LightGray" 
-					d:IsLocked="True">
-				<TextBlock Margin="11">Матрица расстояний D</TextBlock>
-			</Canvas>
+          <ScrollViewer HorizontalScrollBarVisibility="Auto"
+						  VerticalScrollBarVisibility="Auto">
+				<Canvas x:Name="DistanceMatrixCanvas" Background="LightGray" 
+						d:IsLocked="True">
+					<TextBlock Margin="11">Матрица расстояний D</TextBlock>
+				</Canvas>
+			</ScrollViewer>
 		</Border>
 
 		<!-- Панель хронологии (нижняя) -->
-		<Grid x:Name="ChronologyPanel"
-			  Grid.Column="0" 
-			  Grid.Row="1"
+		<Grid Grid.Column="0" 
+            Grid.Row="2"
 			  Grid.ColumnSpan="4" 
 			  Background="SeaShell" 
 			  d:IsLocked="True">
 
 			<Grid.RowDefinitions>
 				<RowDefinition Height="Auto"/>
+             <RowDefinition Height="Auto"/>
 				<RowDefinition Height="*"/>
 			</Grid.RowDefinitions>
 
 			<TextBlock Grid.Row="0" Margin="5">Хронология шагов (k)</TextBlock>
-			<Slider Grid.Row="1"
+            <Slider x:Name="TimelineSlider"
+					Grid.Row="1"
 					Minimum="0" 
-					Maximum="20" 
+                   Maximum="0" 
 					TickFrequency="1" 
+                 ValueChanged="TimelineSlider_ValueChanged"
 					IsSnapToTickEnabled="True" 
-					Margin="10,0"/>
+                 Margin="10,0,10,6"/>
+
+			<DataGrid x:Name="CalculationTable"
+					  Grid.Row="2"
+					  Margin="10,0,10,10"
+					  IsReadOnly="True"
+					  HeadersVisibility="Column"
+					  AutoGenerateColumns="False">
+				<DataGrid.Columns>
+					<DataGridTextColumn Header="k" Binding="{Binding Step}" Width="60"/>
+					<DataGridTextColumn Header="i" Binding="{Binding From}" Width="60"/>
+					<DataGridTextColumn Header="j" Binding="{Binding To}" Width="60"/>
+					<DataGridTextColumn Header="OldD" Binding="{Binding OldDistance}" Width="*"/>
+					<DataGridTextColumn Header="NewD" Binding="{Binding NewDistance}" Width="*"/>
+					<DataGridTextColumn Header="OldP" Binding="{Binding OldPredecessor}" Width="90"/>
+					<DataGridTextColumn Header="NewP" Binding="{Binding NewPredecessor}" Width="90"/>
+				</DataGrid.Columns>
+			</DataGrid>
 		</Grid>
 	</Grid>
 </Window>

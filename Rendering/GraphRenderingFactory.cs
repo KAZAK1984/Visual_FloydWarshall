@@ -10,7 +10,13 @@ namespace Visual_FloydWarshall.Rendering
         const double topOffset = 30;
         const double nodeRadius = 14;
 
-        public static IReadOnlyList<UIElement> CreateCircularGraphElements(int vertexCount, double canvasWidth, double canvasHeight)
+        public static IReadOnlyList<UIElement> CreateCircularGraphElements(
+            int vertexCount,
+            double canvasWidth,
+            double canvasHeight,
+            long?[,]? adjacencyMatrix = null,
+            IReadOnlySet<int>? changedVertices = null,
+            IReadOnlySet<int>? fastestPathVertices = null)
         {
             var elements = new List<UIElement>
             {
@@ -32,29 +38,83 @@ namespace Visual_FloydWarshall.Rendering
                     center.Y + layoutRadius * Math.Sin(angle));
             }
 
-            for (var i = 0; i < vertexCount; i++)
+            if (adjacencyMatrix is null)
             {
-                var from = points[i];
-                var to = points[(i + 1) % vertexCount];
-                elements.Add(new Line
+                for (var i = 0; i < vertexCount; i++)
                 {
-                    X1 = from.X,
-                    Y1 = from.Y,
-                    X2 = to.X,
-                    Y2 = to.Y,
-                    Stroke = Brushes.DimGray,
-                    StrokeThickness = 1.5
-                });
+                    var from = points[i];
+                    var to = points[(i + 1) % vertexCount];
+                    elements.Add(new Line
+                    {
+                        X1 = from.X,
+                        Y1 = from.Y,
+                        X2 = to.X,
+                        Y2 = to.Y,
+                        Stroke = Brushes.DimGray,
+                        StrokeThickness = 1.5
+                    });
+                }
+            }
+            else
+            {
+                for (var i = 0; i < vertexCount; i++)
+                {
+                    for (var j = i + 1; j < vertexCount; j++)
+                    {
+                        var weight = adjacencyMatrix[i, j];
+                        if (!weight.HasValue)
+                            continue;
+
+                        var from = points[i];
+                        var to = points[j];
+
+                        elements.Add(new Line
+                        {
+                            X1 = from.X,
+                            Y1 = from.Y,
+                            X2 = to.X,
+                            Y2 = to.Y,
+                            Stroke = Brushes.DimGray,
+                            StrokeThickness = 1.5
+                        });
+
+                        var midX = (from.X + to.X) / 2;
+                        var midY = (from.Y + to.Y) / 2;
+
+                        var weightLabel = new TextBlock
+                        {
+                            Text = weight.Value.ToString(),
+                            FontSize = 11,
+                            FontWeight = FontWeights.SemiBold,
+                            Foreground = Brushes.Black,
+                            Background = Brushes.WhiteSmoke,
+                            Padding = new Thickness(2, 0, 2, 0)
+                        };
+
+                        Canvas.SetLeft(weightLabel, midX - 10);
+                        Canvas.SetTop(weightLabel, midY - 8);
+                        elements.Add(weightLabel);
+                    }
+                }
             }
 
             for (var i = 0; i < vertexCount; i++)
             {
                 var p = points[i];
+                var isChanged = changedVertices?.Contains(i) == true;
+                var isOnFastestPath = fastestPathVertices?.Contains(i) == true;
+
+                var fill = isChanged
+                    ? Brushes.IndianRed
+                    : isOnFastestPath
+                        ? Brushes.MediumSeaGreen
+                        : Brushes.CornflowerBlue;
+
                 var node = new Ellipse
                 {
                     Width = nodeRadius * 2,
                     Height = nodeRadius * 2,
-                    Fill = Brushes.CornflowerBlue,
+                    Fill = fill,
                     Stroke = Brushes.MidnightBlue,
                     StrokeThickness = 1
                 };

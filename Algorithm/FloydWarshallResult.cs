@@ -1,11 +1,17 @@
 namespace Visual_FloydWarshall.Algorithm
 {
-    public sealed class FloydWarshallResult(long[,] distances, int[,] predecessors, bool hasNegativeCycle, IReadOnlyList<FloydWarshallIterationLog> iterationLogs)
+    public sealed class FloydWarshallResult(
+        long[,] distances,
+        int[,] predecessors,
+        bool hasNegativeCycle,
+        IReadOnlyList<FloydWarshallIterationLog> iterationLogs,
+        IReadOnlyList<FloydWarshallSnapshot> snapshots)
 	{
 		public long[,] Distances { get; } = distances;
 		public int[,] Predecessors { get; } = predecessors;
 		public bool HasNegativeCycle { get; } = hasNegativeCycle;
 		public IReadOnlyList<FloydWarshallIterationLog> IterationLogs { get; } = iterationLogs;
+        public IReadOnlyList<FloydWarshallSnapshot> Snapshots { get; } = snapshots;
 
 		public IReadOnlyList<int> RestorePath(int startVertex, int endVertex)
         {
