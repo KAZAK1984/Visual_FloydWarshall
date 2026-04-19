@@ -90,7 +90,7 @@
                                  TextWrapping="Wrap" Text="0" Margin="5,0,5,5" 
 								 util:TextBoxBehavior.NumericOnly="True"
 								 util:TextBoxBehavior.MinValue="0"
-								 util:TextBoxBehavior.MaxValue="{Binding Text, ElementName=VertexCountTextBox}"/>
+								 util:TextBoxBehavior.MaxValue="{Binding Text, ElementName=VertexCountTextBox, Converter={StaticResource SubtractOneConverter}}"/>
 
                         <TextBlock TextWrapping="Wrap" Margin="5,0,5,2"> Целевой узел </TextBlock>
                         <TextBox x:Name="CalculateEndPos"
