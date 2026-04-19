@@ -6,8 +6,11 @@
 		xmlns:util="clr-namespace:Visual_FloydWarshall.Utility"
 		mc:Ignorable="d"
 		Title="MainWindow" 
-		Height="450" MinHeight="300"
-		Width="800" MinWidth="400">
+		MinHeight="600"
+		MinWidth="800">
+	<Window.Resources>
+		<util:SubtractOneConverter x:Key="SubtractOneConverter"/>
+	</Window.Resources>
 	<Grid>
 		<Grid.ColumnDefinitions>
 			<ColumnDefinition Width="0.4*" />
@@ -21,14 +24,19 @@
 			<RowDefinition Height="0.4*" />
 		</Grid.RowDefinitions>
 
+        <!-- Верхнее меню -->
 		<Menu Grid.Row="0" Grid.ColumnSpan="4">
+            
 			<MenuItem Header="Файл">
 				<MenuItem Header="Сохранить" Click="SaveMenuItem_Click" />
 				<MenuItem Header="Загрузить" Click="LoadMenuItem_Click" />
 			</MenuItem>
+            
 			<MenuItem Header="Алгоритм">
 				<MenuItem Header="Описание" Click="ShowDescriptionMenuItem_Click" />
+             <MenuItem Header="Как читать визуализацию" Click="ShowVisualizationGuideMenuItem_Click" />
 			</MenuItem>
+            
 		</Menu>
 
 		<!-- Левая панель инструментов -->
@@ -46,39 +54,52 @@
 					<RowDefinition Height="*"/>
 				</Grid.RowDefinitions>
 
-				<TextBlock Grid.Row="0" FontWeight="Bold" Margin="5">Инструменты</TextBlock>
+				<TextBlock Grid.Row="0" FontWeight="Bold" Margin="5,0"> Инструменты </TextBlock>
 
-				<Border Grid.Row="1" BorderBrush="Gray" BorderThickness="1" Margin="5">
+				<Border Grid.Row="1" BorderBrush="Gray" BorderThickness="1" Margin="5,5,7,5">
 					<StackPanel Background="WhiteSmoke">
-						<Button x:Name="CreateGraph" Click="CreateGraph_Click" Content="Создать граф" Margin="5"/>
+
+                        <Border BorderBrush="Gray" BorderThickness="0,0,0,1">
+                            <TextBlock TextWrapping="Wrap" Margin="5"> Основное </TextBlock>
+                        </Border>
+
+                        <Button Click="CalculatePaths_Click" Content="Рассчитать пути" Margin="5"/>
+
+                        <Button Click="CreateGraph_Click" Content="Создать граф" Margin="5"/>
 						
-                        <TextBlock TextWrapping="Wrap" Margin="5">Кол-во вершин создаваемого графа</TextBlock>
+                        <TextBlock TextWrapping="Wrap" Margin="5,0,5,2"> Кол-во вершин графа </TextBlock>
 						<TextBox x:Name="VertexCountTextBox"
                                  TextWrapping="Wrap" Text="10" Margin="5,0,5,5" 
                                  util:TextBoxBehavior.NumericOnly="True"
                                  util:TextBoxBehavior.MinValue="4"
                                  util:TextBoxBehavior.MaxValue="40"/>
+                        
 					</StackPanel>
 				</Border>
 
-				<Border Grid.Row="2" BorderBrush="Gray" BorderThickness="1" Margin="5">
-					<StackPanel Background="WhiteSmoke">
-						<Button x:Name="CalculatePaths" Click="CalculatePaths_Click" Content="Рассчитать пути" Margin="5"/>
-						<Button Click="ShowDescriptionMenuItem_Click" Content="Описание алгоритма" Margin="5,0,5,5"/>
-						
-                        <TextBlock TextWrapping="Wrap" Margin="5">Узел отсчёта</TextBlock>
+                <Border Grid.Row="2" BorderBrush="Gray" BorderThickness="1" Margin="5,5,7,5">
+                    <StackPanel Background="WhiteSmoke">
+
+                        <Border BorderBrush="Gray" BorderThickness="0,0,0,1">
+							<TextBlock TextWrapping="Wrap" Margin="5"> Дополнительное </TextBlock>
+                        </Border>
+
+                        <TextBlock TextWrapping="Wrap" Margin="5,5,5,2"> Узел отсчёта </TextBlock>
                         <TextBox x:Name="CalculateStartPos"
+                                 KeyDown="VertexSelection_KeyDown"
                                  TextWrapping="Wrap" Text="0" Margin="5,0,5,5" 
 								 util:TextBoxBehavior.NumericOnly="True"
-                               util:TextBoxBehavior.MinValue="0"
-								 util:TextBoxBehavior.MaxValue="40"/>
-                        
-                        <TextBlock TextWrapping="Wrap" Margin="5">Целевой узел</TextBlock>
+								 util:TextBoxBehavior.MinValue="0"
+								 util:TextBoxBehavior.MaxValue="{Binding Text, ElementName=VertexCountTextBox}"/>
+
+                        <TextBlock TextWrapping="Wrap" Margin="5,0,5,2"> Целевой узел </TextBlock>
                         <TextBox x:Name="CalculateEndPos"
+                                 KeyDown="VertexSelection_KeyDown"
                                  TextWrapping="Wrap" Text="1" Margin="5,0,5,5" 
 								 util:TextBoxBehavior.NumericOnly="True"
-                               util:TextBoxBehavior.MinValue="0"
-								 util:TextBoxBehavior.MaxValue="40"/>
+								 util:TextBoxBehavior.MinValue="0"
+                                util:TextBoxBehavior.MaxValue="{Binding Text, ElementName=VertexCountTextBox, Converter={StaticResource SubtractOneConverter}}"/>
+                        
                     </StackPanel>
 				</Border>
 			</Grid>
@@ -91,12 +112,13 @@
 				BorderThickness="3,0,0,3"
 				d:IsLocked="True">
 
-			<Canvas x:Name="MainCanvas"  
+            <Canvas x:Name="MainCanvas"  
 					Background="LightGray" 
-                  SizeChanged="MainCanvas_SizeChanged"
+					SizeChanged="MainCanvas_SizeChanged"
 					d:IsLocked="True">
 				<TextBlock Margin="5">Граф (Визуализация)</TextBlock>
 			</Canvas>
+            
 		</Border>
 
 		<!-- Разделитель -->
@@ -115,18 +137,23 @@
 				BorderThickness="0,0,0,3"
 				d:IsLocked="True">
 
-          <ScrollViewer HorizontalScrollBarVisibility="Auto"
+          <ScrollViewer x:Name="DistanceMatrixScrollViewer"
+						  HorizontalScrollBarVisibility="Auto"
 						  VerticalScrollBarVisibility="Auto">
-				<Canvas x:Name="DistanceMatrixCanvas" Background="LightGray" 
+                <Canvas x:Name="DistanceMatrixCanvas" 
+                     Background="LightGray"
+						MinWidth="{Binding ViewportWidth, ElementName=DistanceMatrixScrollViewer}"
+						MinHeight="{Binding ViewportHeight, ElementName=DistanceMatrixScrollViewer}"
 						d:IsLocked="True">
 					<TextBlock Margin="11">Матрица расстояний D</TextBlock>
 				</Canvas>
+                
 			</ScrollViewer>
 		</Border>
 
 		<!-- Панель хронологии (нижняя) -->
 		<Grid Grid.Column="0" 
-            Grid.Row="2"
+              Grid.Row="2"
 			  Grid.ColumnSpan="4" 
 			  Background="SeaShell" 
 			  d:IsLocked="True">
@@ -134,35 +161,95 @@
 			<Grid.RowDefinitions>
 				<RowDefinition Height="Auto"/>
              <RowDefinition Height="Auto"/>
+				<RowDefinition Height="Auto"/>
+				<RowDefinition Height="Auto"/>
 				<RowDefinition Height="*"/>
 			</Grid.RowDefinitions>
 
-			<TextBlock Grid.Row="0" Margin="5">Хронология шагов (k)</TextBlock>
-            <Slider x:Name="TimelineSlider"
-					Grid.Row="1"
-					Minimum="0" 
-                   Maximum="0" 
-					TickFrequency="1" 
-                 ValueChanged="TimelineSlider_ValueChanged"
-					IsSnapToTickEnabled="True" 
-                 Margin="10,0,10,6"/>
+          <Grid Grid.Row="0" Margin="5,5,5,2">
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="*"/>
+					<ColumnDefinition Width="Auto"/>
+				</Grid.ColumnDefinitions>
+				<TextBlock Grid.Column="0" VerticalAlignment="Center">Ручной выбор шага циклов</TextBlock>
+				<Button Grid.Column="1"
+						Content="Следующая операция (k,i,j)"
+						Padding="10,2"
+						Margin="8,0,0,0"
+						Click="NextOperation_Click"/>
+			</Grid>
 
-			<DataGrid x:Name="CalculationTable"
-					  Grid.Row="2"
+			<Grid Grid.Row="1" Margin="10,0,10,2">
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="Auto"/>
+					<ColumnDefinition Width="*"/>
+					<ColumnDefinition Width="Auto"/>
+				</Grid.ColumnDefinitions>
+				<TextBlock Grid.Column="0" VerticalAlignment="Center" Margin="0,0,8,0">k:</TextBlock>
+				<Slider x:Name="LoopKSlider"
+						Grid.Column="1"
+						Minimum="0"
+						Maximum="0"
+						TickFrequency="1"
+						IsSnapToTickEnabled="True"
+						ValueChanged="LoopSlider_ValueChanged"/>
+				<TextBlock Grid.Column="2" VerticalAlignment="Center" Margin="8,0,0,0" Text="{Binding Value, ElementName=LoopKSlider, StringFormat=F0}"/>
+			</Grid>
+
+			<Grid Grid.Row="2" Margin="10,0,10,2">
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="Auto"/>
+					<ColumnDefinition Width="*"/>
+					<ColumnDefinition Width="Auto"/>
+				</Grid.ColumnDefinitions>
+				<TextBlock Grid.Column="0" VerticalAlignment="Center" Margin="0,0,8,0">i:</TextBlock>
+				<Slider x:Name="LoopISlider"
+						Grid.Column="1"
+						Minimum="0"
+						Maximum="0"
+						TickFrequency="1"
+						IsSnapToTickEnabled="True"
+						ValueChanged="LoopSlider_ValueChanged"/>
+				<TextBlock Grid.Column="2" VerticalAlignment="Center" Margin="8,0,0,0" Text="{Binding Value, ElementName=LoopISlider, StringFormat=F0}"/>
+			</Grid>
+
+			<Grid Grid.Row="3" Margin="10,0,10,6">
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="Auto"/>
+					<ColumnDefinition Width="*"/>
+					<ColumnDefinition Width="Auto"/>
+				</Grid.ColumnDefinitions>
+				<TextBlock Grid.Column="0" VerticalAlignment="Center" Margin="0,0,8,0">j:</TextBlock>
+				<Slider x:Name="LoopJSlider"
+						Grid.Column="1"
+						Minimum="0"
+						Maximum="0"
+						TickFrequency="1"
+						IsSnapToTickEnabled="True"
+						ValueChanged="LoopSlider_ValueChanged"/>
+				<TextBlock Grid.Column="2" VerticalAlignment="Center" Margin="8,0,0,0" Text="{Binding Value, ElementName=LoopJSlider, StringFormat=F0}"/>
+			</Grid>
+
+            <DataGrid x:Name="CalculationTable"
+                    Grid.Row="4"
 					  Margin="10,0,10,10"
 					  IsReadOnly="True"
 					  HeadersVisibility="Column"
 					  AutoGenerateColumns="False">
-				<DataGrid.Columns>
-					<DataGridTextColumn Header="k" Binding="{Binding Step}" Width="60"/>
-					<DataGridTextColumn Header="i" Binding="{Binding From}" Width="60"/>
-					<DataGridTextColumn Header="j" Binding="{Binding To}" Width="60"/>
+                
+                <DataGrid.Columns>
+					<DataGridTextColumn Header="k" Binding="{Binding Step}" Width="0.2*"/>
+                    <DataGridTextColumn Header="i" Binding="{Binding From}" Width="0.2*"/>
+                    <DataGridTextColumn Header="j" Binding="{Binding To}" Width="0.2*"/>
 					<DataGridTextColumn Header="OldD" Binding="{Binding OldDistance}" Width="*"/>
 					<DataGridTextColumn Header="NewD" Binding="{Binding NewDistance}" Width="*"/>
-					<DataGridTextColumn Header="OldP" Binding="{Binding OldPredecessor}" Width="90"/>
-					<DataGridTextColumn Header="NewP" Binding="{Binding NewPredecessor}" Width="90"/>
+                    <DataGridTextColumn Header="OldP" Binding="{Binding OldPredecessor}" Width="*"/>
+                    <DataGridTextColumn Header="NewP" Binding="{Binding NewPredecessor}" Width="*"/>
 				</DataGrid.Columns>
+                
 			</DataGrid>
+            
 		</Grid>
+        
 	</Grid>
 </Window>

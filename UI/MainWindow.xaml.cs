@@ -1,10 +1,11 @@
-﻿using System.Windows;
+﻿using Microsoft.Win32;
+using System.Windows;
 using System.Windows.Controls;
-using System.IO;
-using Microsoft.Win32;
+using System.Windows.Input;
 using Visual_FloydWarshall.Algorithm;
 using Visual_FloydWarshall.Logging;
 using Visual_FloydWarshall.Rendering;
+using Visual_FloydWarshall.Utility;
 
 namespace Visual_FloydWarshall
 {
@@ -13,25 +14,21 @@ namespace Visual_FloydWarshall
 	/// </summary>
 	public partial class MainWindow : Window
 	{
-        private readonly IAlgorithmRunner _algorithmRunner;
+		private readonly IAlgorithmRunner _algorithmRunner;
 		private readonly ILogger _logger;
 		private long?[,]? _currentAdjacencyMatrix;
-        private int _currentVertexCount;
+		private int _currentVertexCount;
 		private int _currentStartVertex;
 		private int _currentEndVertex;
+		private bool _suppressLoopSliderRedraw;
 
-       public MainWindow() : this(CreateDependencies())
-		{
-		}
+		public MainWindow() : this(CreateDependencies()) { }
 
-		private MainWindow((IAlgorithmRunner Runner, ILogger Logger) dependencies)
-			: this(dependencies.Runner, dependencies.Logger)
-		{
-		}
+		private MainWindow((IAlgorithmRunner Runner, ILogger Logger) dependencies) : this(dependencies.Runner, dependencies.Logger) { }
 
 		internal MainWindow(IAlgorithmRunner algorithmRunner, ILogger logger)
 		{
-          ValidateDependencies(algorithmRunner, logger);
+			ValidateDependencies(algorithmRunner, logger);
 
 			_algorithmRunner = algorithmRunner;
 			_logger = logger;
@@ -39,47 +36,34 @@ namespace Visual_FloydWarshall
 			InitializeComponent();
 
 			_currentVertexCount = int.Parse(VertexCountTextBox.Text);
-         _currentStartVertex = 0;
+			_currentStartVertex = 0;
 			_currentEndVertex = 0;
-            _currentAdjacencyMatrix = BuildDefaultAdjacencyMatrix(_currentVertexCount);
+			_currentAdjacencyMatrix = MainWindowSupport.BuildDefaultAdjacencyMatrix(_currentVertexCount);
 
 			DrawCurrentVisualization();
 		}
 
-        private static (IAlgorithmRunner Runner, ILogger Logger) CreateDependencies()
-		{
-			var logger = CreateDefaultLogger();
-            return (new FloydAlgorithmRunner(logger), logger);
-		}
+		private static (IAlgorithmRunner Runner, ILogger Logger) CreateDependencies() =>
+			 MainWindowSupport.CreateDependencies();
 
-		private static ILogger CreateDefaultLogger()
-		{
-			var logPath = Path.Combine(AppContext.BaseDirectory, "visual_floyd.log");
-			return new FileLogger(logPath);
-		}
-
-        private static void ValidateDependencies(IAlgorithmRunner algorithmRunner, ILogger logger)
-		{
-			ArgumentNullException.ThrowIfNull(algorithmRunner);
-			ArgumentNullException.ThrowIfNull(logger);
-		}
+		private static void ValidateDependencies(IAlgorithmRunner algorithmRunner, ILogger logger) =>
+			MainWindowSupport.ValidateDependencies(algorithmRunner, logger);
 
 		private void CreateGraph_Click(object sender, RoutedEventArgs e)
 		{
-           try
+			try
 			{
 				_currentVertexCount = int.Parse(VertexCountTextBox.Text);
 				_currentStartVertex = int.Parse(CalculateStartPos.Text);
 				_currentEndVertex = int.Parse(CalculateEndPos.Text);
 
-				_currentAdjacencyMatrix = BuildDefaultAdjacencyMatrix(_currentVertexCount);
+				_currentAdjacencyMatrix = MainWindowSupport.BuildDefaultAdjacencyMatrix(_currentVertexCount);
 
 				CalculationTable.ItemsSource = null;
-				TimelineSlider.Minimum = 0;
-				TimelineSlider.Maximum = 0;
-				TimelineSlider.Value = 0;
+				UpdateLoopSliderBounds();
+				SetLoopSelection(0, 0, 0);
 
-             DrawCurrentVisualization();
+				DrawCurrentVisualization();
 				_logger.Info("New graph created.");
 			}
 			catch (Exception ex)
@@ -91,9 +75,9 @@ namespace Visual_FloydWarshall
 
 		private void CalculatePaths_Click(object sender, RoutedEventArgs e)
 		{
-         try
+			try
 			{
-               _currentStartVertex = int.Parse(CalculateStartPos.Text);
+				_currentStartVertex = int.Parse(CalculateStartPos.Text);
 				_currentEndVertex = int.Parse(CalculateEndPos.Text);
 
 				if (_currentStartVertex >= _currentVertexCount || _currentEndVertex >= _currentVertexCount)
@@ -102,9 +86,9 @@ namespace Visual_FloydWarshall
 					return;
 				}
 
-             _currentAdjacencyMatrix ??= BuildDefaultAdjacencyMatrix(_currentVertexCount);
+				_currentAdjacencyMatrix ??= MainWindowSupport.BuildDefaultAdjacencyMatrix(_currentVertexCount);
 
-             var config = new FloydAlgorithmConfig(
+				var config = new FloydAlgorithmConfig(
 					_currentVertexCount,
 					_currentStartVertex,
 					_currentEndVertex,
@@ -114,7 +98,7 @@ namespace Visual_FloydWarshall
 				_algorithmRunner.Execute(config);
 				ApplyRunnerStateToView();
 
-                DrawCurrentVisualization();
+				DrawCurrentVisualization();
 			}
 			catch (Exception ex)
 			{
@@ -173,9 +157,31 @@ namespace Visual_FloydWarshall
 		private void ShowDescriptionMenuItem_Click(object sender, RoutedEventArgs e)
 		{
 			var description = _algorithmRunner.CurrentConfig?.Description
-				?? "Алгоритм Флойда-Уоршелла вычисляет кратчайшие пути между всеми парами вершин.";
+				?? "Алгоритм Флойда-Уоршелла — это динамический алгоритм для поиска кратчайших путей между всеми парами вершин взвешенного графа.\n" +
+				"Он работает с графами, содержащими отрицательные рёбра (но без отрицательных циклов), и имеет временную сложность O(V³), " +
+				"где V — количество вершин. Алгоритм последовательно улучшает оценки расстояний, используя промежуточные вершины.\n" +
+				"Результатом является матрица кратчайших расстояний между всеми парами вершин и матрица предшественников для восстановления путей.\n" +
+			   "Алгоритм также может обнаруживать отрицательные циклы в графе.";
 
 			MessageBox.Show(description, "Описание алгоритма", MessageBoxButton.OK, MessageBoxImage.Information);
+		}
+
+		private void ShowVisualizationGuideMenuItem_Click(object sender, RoutedEventArgs e)
+		{
+			var visualizationGuide =
+				"Как читать визуализацию:\n" +
+				"1) Внизу выбери тройку (k, i, j) или нажимай 'Следующая операция (k,i,j)'.\n" +
+				"2) На графе показана текущая проверка: можно ли улучшить D[i,j] через вершину k.\n" +
+				"3) Цвета на графе:\n" +
+				"   - оранжевый узел: k (промежуточная вершина),\n" +
+				"   - красный узел: i (начальная вершина пары),\n" +
+				"   - зелёный узел: j (конечная вершина пары),\n" +
+				"   - фиолетовые рёбра: i-k и k-j (кандидатный путь через k),\n" +
+				"   - синее пунктирное ребро: i-j (текущее расстояние, которое пытаемся улучшить).\n" +
+				"4) В матрице D подсвечиваются ячейки D[i,j], D[i,k], D[k,j], а выше выводится формула сравнения.\n" +
+				"5) Если найдено улучшение, показывается переход OldDistance -> NewDistance.";
+
+			MessageBox.Show(visualizationGuide, "Как читать визуализацию", MessageBoxButton.OK, MessageBoxImage.Information);
 		}
 
 		private void ApplyRunnerStateToView()
@@ -196,47 +202,59 @@ namespace Visual_FloydWarshall
 			if (result is null)
 			{
 				CalculationTable.ItemsSource = null;
-				TimelineSlider.Minimum = 0;
-				TimelineSlider.Maximum = 0;
-				TimelineSlider.Value = 0;
+				UpdateLoopSliderBounds();
+				SetLoopSelection(0, 0, 0);
 				return;
 			}
 
-			CalculationTable.ItemsSource = BuildCalculationRows(result.IterationLogs);
-
-			TimelineSlider.Minimum = 0;
-			TimelineSlider.Maximum = Math.Max(0, result.Snapshots.Count - 1);
-			TimelineSlider.Value = TimelineSlider.Maximum;
+			CalculationTable.ItemsSource = MainWindowSupport.BuildCalculationRows(result.IterationLogs);
+			UpdateLoopSliderBounds();
+			SetLoopSelection(0, 0, 0);
 
 			if (result.HasNegativeCycle)
 				MessageBox.Show("Обнаружен отрицательный цикл в графе.");
 
 		}
 
-        private void DrawCurrentVisualization()
+		private void DrawCurrentVisualization()
 		{
-			var step = GetCurrentStep();
-			var changedVertices = GetChangedVerticesForStep(step);
-			var fastestPath = GetFastestPath();
+			var step = (int)LoopKSlider.Value;
+			var fromVertex = (int)LoopISlider.Value;
+			var toVertex = (int)LoopJSlider.Value;
+			var changedVertices = new HashSet<int> { step, fromVertex, toVertex };
+			var fastestPath = GetFastestPath(fromVertex, toVertex);
 			var fastestPathVertices = fastestPath.Count > 0 ? new HashSet<int>(fastestPath) : null;
+			var selectedChange = GetSelectedChange(step, fromVertex, toVertex);
 
-			DrawDefaultGraph(changedVertices, fastestPathVertices);
-			DrawDistanceSnapshot(fastestPath);
+			DrawDefaultGraph(changedVertices, fastestPathVertices, fastestPath, step, fromVertex, toVertex, selectedChange is not null);
+			DrawDistanceSnapshot(fastestPath, step, fromVertex, toVertex, selectedChange);
 		}
 
-		private void DrawDefaultGraph(IReadOnlySet<int>? changedVertices = null, IReadOnlySet<int>? fastestPathVertices = null)
+		private void DrawDefaultGraph(
+			   IReadOnlySet<int>? changedVertices = null,
+			   IReadOnlySet<int>? fastestPathVertices = null,
+			   IReadOnlyList<int>? fastestPath = null,
+			  int currentStep = -1,
+			   int currentFromVertex = -1,
+			   int currentToVertex = -1,
+			   bool hasImprovement = false)
 		{
 			MainCanvas.Children.Clear();
 			var canvasWidth = MainCanvas.ActualWidth > 0 ? MainCanvas.ActualWidth : 300;
 			var canvasHeight = MainCanvas.ActualHeight > 0 ? MainCanvas.ActualHeight : 250;
 
-          foreach (var element in GraphRenderingFactory.CreateCircularGraphElements(
+			foreach (var element in GraphRenderingFactory.CreateCircularGraphElements(
 				_currentVertexCount,
 				canvasWidth,
 				canvasHeight,
 				_currentAdjacencyMatrix,
 				changedVertices,
-				fastestPathVertices))
+			 fastestPathVertices,
+				fastestPath,
+			   currentStep,
+				currentFromVertex,
+				currentToVertex,
+				hasImprovement))
 				MainCanvas.Children.Add(element);
 		}
 
@@ -245,19 +263,51 @@ namespace Visual_FloydWarshall
 			DrawCurrentVisualization();
 		}
 
-        private void TimelineSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+		private void LoopSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
 		{
-         DrawCurrentVisualization();
+			if (_suppressLoopSliderRedraw)
+				return;
+
+			DrawCurrentVisualization();
 		}
 
-     private void DrawDistanceSnapshot(IReadOnlyList<int> fastestPath)
+		private void NextOperation_Click(object sender, RoutedEventArgs e)
+		{
+			MoveToNextOperation();
+		}
+
+		private void VertexSelection_KeyDown(object sender, KeyEventArgs e)
+		{
+			if (e.Key != Key.Return)
+				return;
+
+			if (!TryUpdateSelectedVertices())
+				return;
+
+			_logger.Info($"Selected vertices updated: start={_currentStartVertex}, end={_currentEndVertex}");
+			DrawCurrentVisualization();
+		}
+
+		private void DrawDistanceSnapshot(
+			 IReadOnlyList<int> fastestPath,
+			 int step,
+			 int fromVertex,
+			 int toVertex,
+			 FloydWarshallCellChange? selectedChange)
 		{
 			DistanceMatrixCanvas.Children.Clear();
-           var snapshot = GetCurrentSnapshot();
+			var snapshot = GetSnapshotForStep(step);
 			var distances = snapshot?.Distances;
-			var step = snapshot?.Step ?? -1;
+			var snapshotStep = snapshot?.Step ?? -1;
 
-          foreach (var element in DistanceMatrixRenderingFactory.CreateSnapshotElements(distances, step, _currentStartVertex, _currentEndVertex, fastestPath))
+			foreach (var element in DistanceMatrixRenderingFactory.CreateSnapshotElements(
+				distances,
+				snapshotStep,
+				fromVertex,
+				toVertex,
+				step,
+				fastestPath,
+				selectedChange))
 				DistanceMatrixCanvas.Children.Add(element);
 
 			UpdateDistanceCanvasSize();
@@ -291,98 +341,124 @@ namespace Visual_FloydWarshall
 			DistanceMatrixCanvas.Height = Math.Max(0, maxHeight);
 		}
 
-     private FloydWarshallSnapshot? GetCurrentSnapshot()
+		private FloydWarshallSnapshot? GetSnapshotForStep(int step)
 		{
-            if (_algorithmRunner.CurrentResult is null)
+			if (_algorithmRunner.CurrentResult is null)
 				return null;
 
-			var snapshotIndex = (int)TimelineSlider.Value;
-         return _algorithmRunner.CurrentResult.Snapshots.ElementAtOrDefault(snapshotIndex);
+			var exact = _algorithmRunner.CurrentResult.Snapshots.FirstOrDefault(x => x.Step == step);
+			if (exact is not null)
+				return exact;
+
+			return _algorithmRunner.CurrentResult.Snapshots.OrderBy(x => x.Step).LastOrDefault();
 		}
 
-		private int GetCurrentStep() => GetCurrentSnapshot()?.Step ?? -1;
-
-		private IReadOnlySet<int> GetChangedVerticesForStep(int step)
+		private bool TryUpdateSelectedVertices()
 		{
-            if (_algorithmRunner.CurrentResult is null || step < 0)
-				return new HashSet<int>();
+			if (CalculateStartPos is null || CalculateEndPos is null)
+				return false;
 
-            var iteration = _algorithmRunner.CurrentResult.IterationLogs.FirstOrDefault(x => x.IntermediateVertex == step);
+			if (!int.TryParse(CalculateStartPos.Text, out var startVertex))
+				return false;
+
+			if (!int.TryParse(CalculateEndPos.Text, out var endVertex))
+				return false;
+
+			if (startVertex < 0 || endVertex < 0)
+				return false;
+
+			if (startVertex >= _currentVertexCount || endVertex >= _currentVertexCount)
+				return false;
+
+			if (_currentStartVertex == startVertex && _currentEndVertex == endVertex)
+				return false;
+
+			_currentStartVertex = startVertex;
+			_currentEndVertex = endVertex;
+			return true;
+		}
+
+		private FloydWarshallCellChange? GetSelectedChange(int step, int fromVertex, int toVertex)
+		{
+			if (_algorithmRunner.CurrentResult is null || step < 0)
+				return null;
+
+			var iteration = _algorithmRunner.CurrentResult.IterationLogs.FirstOrDefault(x => x.IntermediateVertex == step);
 			if (iteration is null)
-				return new HashSet<int>();
+				return null;
 
-			var changedVertices = new HashSet<int> { step };
-			foreach (var change in iteration.Changes)
-			{
-				changedVertices.Add(change.FromVertex);
-				changedVertices.Add(change.ToVertex);
-			}
-
-			return changedVertices;
+			return iteration.Changes.FirstOrDefault(x => x.FromVertex == fromVertex && x.ToVertex == toVertex);
 		}
 
-		private IReadOnlyList<int> GetFastestPath()
+		private IReadOnlyList<int> GetFastestPath(int startVertex, int endVertex)
 		{
-            if (_algorithmRunner.CurrentResult is null)
+			if (_algorithmRunner.CurrentResult is null)
 				return [];
 
-         return _algorithmRunner.CurrentResult.RestorePath(_currentStartVertex, _currentEndVertex);
+			return _algorithmRunner.CurrentResult.RestorePath(startVertex, endVertex);
 		}
 
-		private static IReadOnlyList<CalculationRow> BuildCalculationRows(IReadOnlyList<FloydWarshallIterationLog> iterationLogs)
+		private void UpdateLoopSliderBounds()
 		{
-			var rows = new List<CalculationRow>();
-			foreach (var iteration in iterationLogs)
+			var maxVertexIndex = Math.Max(0, _currentVertexCount - 1);
+			LoopKSlider.Minimum = 0;
+			LoopKSlider.Maximum = maxVertexIndex;
+			LoopISlider.Minimum = 0;
+			LoopISlider.Maximum = maxVertexIndex;
+			LoopJSlider.Minimum = 0;
+			LoopJSlider.Maximum = maxVertexIndex;
+
+			LoopKSlider.Value = ClampSliderValue(LoopKSlider.Value, LoopKSlider.Minimum, LoopKSlider.Maximum);
+			LoopISlider.Value = ClampSliderValue(LoopISlider.Value, LoopISlider.Minimum, LoopISlider.Maximum);
+			LoopJSlider.Value = ClampSliderValue(LoopJSlider.Value, LoopJSlider.Minimum, LoopJSlider.Maximum);
+		}
+
+		private void MoveToNextOperation()
+		{
+			var maxVertexIndex = Math.Max(0, _currentVertexCount - 1);
+			var k = (int)LoopKSlider.Value;
+			var i = (int)LoopISlider.Value;
+			var j = (int)LoopJSlider.Value;
+
+			j++;
+			if (j > maxVertexIndex)
 			{
-				foreach (var change in iteration.Changes)
-				{
-					rows.Add(new CalculationRow(
-						iteration.IntermediateVertex,
-						change.FromVertex,
-						change.ToVertex,
-						FormatDistance(change.OldDistance),
-						FormatDistance(change.NewDistance),
-						change.OldPredecessor,
-						change.NewPredecessor));
-				}
+				j = 0;
+				i++;
 			}
 
-			return rows;
-		}
-
-		private static string FormatDistance(long distance) =>
-			distance >= FloydWarshallSolver.Inf ? "∞" : distance.ToString();
-
-		private static long?[,] BuildDefaultAdjacencyMatrix(int vertexCount)
-		{
-			var matrix = new long?[vertexCount, vertexCount];
-			const double edgeProbability = 0.35;
-
-			for (var i = 0; i < vertexCount; i++)
+			if (i > maxVertexIndex)
 			{
-               matrix[i, i] = 0;
-
-				for (var j = i + 1; j < vertexCount; j++)
-				{
-					if (Random.Shared.NextDouble() > edgeProbability)
-						continue;
-
-					var weight = Random.Shared.Next(1, 21);
-					matrix[i, j] = weight;
-					matrix[j, i] = weight;
-				}
+				i = 0;
+				k++;
 			}
 
-			return matrix;
+			if (k > maxVertexIndex)
+				k = 0;
+
+			SetLoopSelection(k, i, j);
+
+			DrawCurrentVisualization();
 		}
 
-		private sealed record CalculationRow(
-			int Step,
-			int From,
-			int To,
-			string OldDistance,
-			string NewDistance,
-			int OldPredecessor,
-			int NewPredecessor);
+		private void SetLoopSelection(int k, int i, int j)
+		{
+			_suppressLoopSliderRedraw = true;
+			LoopKSlider.Value = ClampSliderValue(k, LoopKSlider.Minimum, LoopKSlider.Maximum);
+			LoopISlider.Value = ClampSliderValue(i, LoopISlider.Minimum, LoopISlider.Maximum);
+			LoopJSlider.Value = ClampSliderValue(j, LoopJSlider.Minimum, LoopJSlider.Maximum);
+			_suppressLoopSliderRedraw = false;
+		}
+
+		private static double ClampSliderValue(double value, double min, double max)
+		{
+			if (value < min)
+				return min;
+
+			if (value > max)
+				return max;
+
+			return value;
+		}
 	}
 }
