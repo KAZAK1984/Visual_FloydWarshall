@@ -114,17 +114,20 @@ namespace Visual_FloydWarshall.Utility
 			textBox.LostFocus -= TextBox_LostFocus;
 			DataObject.RemovePastingHandler(textBox, TextBox_Pasting);
 
-			if (GetNumericOnly(textBox))
+			var isNumericOnly = GetNumericOnly(textBox);
+			var hasRangeValidation = GetMinValue(textBox).HasValue || GetMaxValue(textBox).HasValue;
+
+			if (isNumericOnly)
 				textBox.PreviewTextInput += TextBox_PreviewTextInput;
 
-			if (GetMinValue(textBox).HasValue || GetMaxValue(textBox).HasValue)
+			if (isNumericOnly || hasRangeValidation)
+				DataObject.AddPastingHandler(textBox, TextBox_Pasting);
+
+			if (hasRangeValidation)
 			{
 				textBox.PreviewKeyDown += TextBox_PreviewKeyDown;
 				textBox.LostFocus += TextBox_LostFocus;
 			}
-
-			if (GetNumericOnly(textBox) || GetMinValue(textBox).HasValue || GetMaxValue(textBox).HasValue)
-				DataObject.AddPastingHandler(textBox, TextBox_Pasting);
 		}
 	}
 }

@@ -9,18 +9,18 @@ using Visual_FloydWarshall.Utility;
 
 namespace Visual_FloydWarshall
 {
-	/// <summary>
-	/// Interaction logic for MainWindow.xaml
-	/// </summary>
 	public partial class MainWindow : Window
 	{
 		private readonly IAlgorithmRunner _algorithmRunner;
 		private readonly ILogger _logger;
+
 		private long?[,]? _currentAdjacencyMatrix;
 		private int _currentVertexCount;
 		private int _currentStartVertex;
 		private int _currentEndVertex;
 		private bool _suppressLoopSliderRedraw;
+		private CancellationTokenSource? _autoModeCts;
+		private int? _lastAutoDelay;
 
 		public MainWindow() : this(CreateDependencies()) { }
 
@@ -53,22 +53,32 @@ namespace Visual_FloydWarshall
 		{
 			try
 			{
+				if (_autoModeCts is not null)
+				{
+					AutoModeButton.Content = "Авто: ВЫКЛ";
+					_autoModeCts.Cancel();
+					_autoModeCts.Dispose();
+					_autoModeCts = null;
+					_logger.Info("Авто-режим остановлен при создании нового графа.");
+				}
+
 				_currentVertexCount = int.Parse(VertexCountTextBox.Text);
 				_currentStartVertex = int.Parse(CalculateStartPos.Text);
 				_currentEndVertex = int.Parse(CalculateEndPos.Text);
 
 				_currentAdjacencyMatrix = MainWindowSupport.BuildDefaultAdjacencyMatrix(_currentVertexCount);
+				_algorithmRunner.Reset();
 
 				CalculationTable.ItemsSource = null;
 				UpdateLoopSliderBounds();
 				SetLoopSelection(0, 0, 0);
 
 				DrawCurrentVisualization();
-				_logger.Info("New graph created.");
+				_logger.Info($"Новый граф создан. Кол-во вершин: {_currentVertexCount}.");
 			}
 			catch (Exception ex)
 			{
-				_logger.Error("Graph creation failed.", ex);
+				_logger.Error("Ошибка создания графа.", ex);
 				MessageBox.Show($"Ошибка создания графа: {ex.Message}");
 			}
 		}
@@ -82,6 +92,7 @@ namespace Visual_FloydWarshall
 
 				if (_currentStartVertex >= _currentVertexCount || _currentEndVertex >= _currentVertexCount)
 				{
+					_logger.Info("Отказано в расчете путей: некорректные индексы вершин.");
 					MessageBox.Show("Стартовый и конечный узлы должны быть меньше количества вершин графа.");
 					return;
 				}
@@ -99,10 +110,11 @@ namespace Visual_FloydWarshall
 				ApplyRunnerStateToView();
 
 				DrawCurrentVisualization();
+				_logger.Info("Расчет путей завершен.");
 			}
 			catch (Exception ex)
 			{
-				_logger.Error("Path calculation failed.", ex);
+				_logger.Error("Ошибка расчета путей.", ex);
 				MessageBox.Show($"Ошибка расчета: {ex.Message}");
 			}
 		}
@@ -121,11 +133,12 @@ namespace Visual_FloydWarshall
 					return;
 
 				_algorithmRunner.SaveToFile(dialog.FileName);
+				_logger.Info($"Результаты сохранены: {dialog.FileName}");
 				MessageBox.Show("Результаты сохранены.");
 			}
 			catch (Exception ex)
 			{
-				_logger.Error("Save operation failed.", ex);
+				_logger.Error("Ошибка сохранения результатов.", ex);
 				MessageBox.Show($"Ошибка сохранения: {ex.Message}");
 			}
 		}
@@ -145,11 +158,12 @@ namespace Visual_FloydWarshall
 				_algorithmRunner.LoadFromFile(dialog.FileName);
 				ApplyRunnerStateToView();
 				DrawCurrentVisualization();
+				_logger.Info($"Результаты загружены: {dialog.FileName}");
 				MessageBox.Show("Результаты загружены.");
 			}
 			catch (Exception ex)
 			{
-				_logger.Error("Load operation failed.", ex);
+				_logger.Error("Ошибка загрузки результатов.", ex);
 				MessageBox.Show($"Ошибка загрузки: {ex.Message}");
 			}
 		}
@@ -271,9 +285,91 @@ namespace Visual_FloydWarshall
 			DrawCurrentVisualization();
 		}
 
+		private void LoopSlider_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+		{
+			_logger.Info($"Выбран шаг: k={(int)LoopKSlider.Value}, i={(int)LoopISlider.Value}, j={(int)LoopJSlider.Value}");
+		}
+
+		private void AutoSpeedTextBox_KeyDown(object sender, KeyEventArgs e)
+		{
+			if (e.Key != Key.Return)
+				return;
+
+			if (!int.TryParse(AutoSpeedTextBox.Text, out var parsedSpeed))
+				return;
+
+			parsedSpeed = Math.Clamp(parsedSpeed, 50, 5000);
+			AutoSpeedTextBox.Text = parsedSpeed.ToString();
+			_logger.Info($"Скорость авто-режима обновлена: {parsedSpeed}");
+		}
+
+		private async void AutoMod_Click(object sender, RoutedEventArgs e)
+		{
+			if (_autoModeCts is not null)
+			{
+				AutoModeButton.Content = "Авто: ВЫКЛ";
+				_autoModeCts.Cancel();
+				_autoModeCts.Dispose();
+				_autoModeCts = null;
+			}
+			else
+			{
+				if (_algorithmRunner.CurrentResult is null)
+				{
+					_logger.Info("Отказано в запуске авто-режима: матрица расстояний не рассчитана.");
+					MessageBox.Show("Сначала выполните расчет, чтобы включить авто-режим.");
+					return;
+				}
+
+				AutoModeButton.Content = "Авто: ВКЛ";
+				var cts = new CancellationTokenSource();
+				_autoModeCts = cts;
+				var token = cts.Token;
+				_logger.Info("Авто-режим запущен.");
+
+				try
+				{
+					while (!token.IsCancellationRequested)
+					{
+						MoveToNextOperation();
+						int delay = (int.TryParse(AutoSpeedTextBox.Text, out var parsedDelay) && parsedDelay >= 50) ? parsedDelay : 50;
+						if (_lastAutoDelay != delay)
+						{
+							_lastAutoDelay = delay;
+							_logger.Info($"Скорость авто-режима обновлена: {delay}");
+						}
+						await Task.Delay(delay, token);
+					}
+				}
+				catch (OperationCanceledException)
+				{
+					_logger.Info("Авто-режим остановлен.");
+				}
+				finally
+				{
+					if (ReferenceEquals(_autoModeCts, cts))
+					{
+						_autoModeCts.Dispose();
+						_autoModeCts = null;
+						AutoModeButton.Content = "Авто: ВЫКЛ";
+						_lastAutoDelay = null;
+					}
+				}
+			}
+		}
+
+		protected override void OnClosed(EventArgs e)
+		{
+			_autoModeCts?.Cancel();
+			_autoModeCts?.Dispose();
+			_autoModeCts = null;
+			base.OnClosed(e);
+		}
+
 		private void NextOperation_Click(object sender, RoutedEventArgs e)
 		{
 			MoveToNextOperation();
+			_logger.Info($"Следующая операция вручную: k={(int)LoopKSlider.Value}, i={(int)LoopISlider.Value}, j={(int)LoopJSlider.Value}");
 		}
 
 		private void VertexSelection_KeyDown(object sender, KeyEventArgs e)
@@ -284,7 +380,8 @@ namespace Visual_FloydWarshall
 			if (!TryUpdateSelectedVertices())
 				return;
 
-			_logger.Info($"Selected vertices updated: start={_currentStartVertex}, end={_currentEndVertex}");
+			SetLoopSelection((int)LoopKSlider.Value, _currentStartVertex, _currentEndVertex);
+			_logger.Info($"Выбраны вершины: старт={_currentStartVertex}, конец={_currentEndVertex}");
 			DrawCurrentVisualization();
 		}
 
@@ -392,10 +489,18 @@ namespace Visual_FloydWarshall
 
 		private IReadOnlyList<int> GetFastestPath(int startVertex, int endVertex)
 		{
-			if (_algorithmRunner.CurrentResult is null)
+			if (_algorithmRunner.CurrentResult is null || _algorithmRunner.CurrentResult.HasNegativeCycle)
 				return [];
 
-			return _algorithmRunner.CurrentResult.RestorePath(startVertex, endVertex);
+			try
+			{
+				return _algorithmRunner.CurrentResult.RestorePath(startVertex, endVertex);
+			}
+			catch (Exception ex) when (ex is ArgumentOutOfRangeException or InvalidOperationException)
+			{
+				_logger.Error("Ошибка восстановления пути.", ex);
+				return [];
+			}
 		}
 
 		private void UpdateLoopSliderBounds()

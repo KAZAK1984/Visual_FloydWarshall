@@ -8,7 +8,7 @@ namespace Visual_FloydWarshall.Utility
 		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			if (!int.TryParse(value?.ToString(), out var parsedValue))
-				return Binding.DoNothing;
+				return 0;
 
 			return Math.Max(0, parsedValue - 1);
 		}

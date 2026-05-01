@@ -6,9 +6,7 @@ namespace Visual_FloydWarshall.Logging;
 public sealed class FileLogger(string filePath) : ILogger
 {
 	private readonly Lock _syncRoot = new();
-
 	public void Info(string message) => Write("INFO", message);
-
 	public void Error(string message, Exception? exception = null)
 	{
 		var finalMessage = exception is null

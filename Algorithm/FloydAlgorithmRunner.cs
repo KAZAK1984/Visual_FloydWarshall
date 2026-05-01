@@ -11,6 +11,9 @@ public sealed class FloydAlgorithmRunner(ILogger logger) : IAlgorithmRunner
 	public AlgorithmConfig? CurrentConfig { get; private set; }
 	public FloydWarshallResult? CurrentResult { get; private set; }
 
+	/// <summary>
+	/// Runs the algorithm and updates the current configuration and result.
+	/// </summary>
 	public void Execute(AlgorithmConfig config)
 	{
 		try
@@ -23,13 +26,20 @@ public sealed class FloydAlgorithmRunner(ILogger logger) : IAlgorithmRunner
 			CurrentResult = FloydWarshallSolver.Solve(floydConfig.AdjacencyMatrix, floydConfig.TrackIterationChanges);
 			CurrentConfig = floydConfig;
 
-			logger.Info($"Algorithm executed. Vertices: {floydConfig.CollectionSize}, start: {floydConfig.StartVertex}, end: {floydConfig.EndVertex}.");
+			logger.Info($"Алгоритм выполнен. Вершин: {floydConfig.CollectionSize}, старт: {floydConfig.StartVertex}, конец: {floydConfig.EndVertex}.");
 		}
 		catch (Exception ex)
 		{
-			logger.Error("Algorithm execution failed.", ex);
+			logger.Error("Ошибка выполнения алгоритма.", ex);
 			throw;
 		}
+	}
+
+	public void Reset()
+	{
+		CurrentConfig = null;
+		CurrentResult = null;
+		logger.Info("Состояние алгоритма сброшено.");
 	}
 
 	public void SaveToFile(string filePath)
@@ -78,11 +88,11 @@ public sealed class FloydAlgorithmRunner(ILogger logger) : IAlgorithmRunner
 			var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true });
 			File.WriteAllText(filePath, json);
 
-			logger.Info($"Result saved to '{filePath}'.");
+			logger.Info($"Результаты сохранены в '{filePath}'.");
 		}
 		catch (Exception ex)
 		{
-			logger.Error($"Failed to save result to '{filePath}'.", ex);
+			logger.Error($"Ошибка сохранения результатов в '{filePath}'.", ex);
 			throw;
 		}
 	}
@@ -107,9 +117,28 @@ public sealed class FloydAlgorithmRunner(ILogger logger) : IAlgorithmRunner
 				payload.AlgorithmName,
 				payload.Description);
 
+			try
+			{
+				ValidateConfig(config);
+			}
+			catch (ArgumentException ex)
+			{
+				throw new InvalidDataException($"File contains invalid configuration: {ex.Message}", ex);
+			}
+
+			var distances = ToRectangular(payload.Distances);
+			var predecessors = ToRectangular(payload.Predecessors);
+			var size = config.CollectionSize;
+
+			if (distances.GetLength(0) != size || distances.GetLength(1) != size)
+				throw new InvalidDataException($"Distances matrix dimensions ({distances.GetLength(0)}x{distances.GetLength(1)}) do not match collection size ({size}).");
+
+			if (predecessors.GetLength(0) != size || predecessors.GetLength(1) != size)
+				throw new InvalidDataException($"Predecessors matrix dimensions ({predecessors.GetLength(0)}x{predecessors.GetLength(1)}) do not match collection size ({size}).");
+
 			var result = new FloydWarshallResult(
-				ToRectangular(payload.Distances),
-				ToRectangular(payload.Predecessors),
+				distances,
+				predecessors,
 				payload.HasNegativeCycle,
 				[.. payload.IterationLogs
 					.Select(log => new FloydWarshallIterationLog(
@@ -127,15 +156,18 @@ public sealed class FloydAlgorithmRunner(ILogger logger) : IAlgorithmRunner
 			CurrentConfig = config;
 			CurrentResult = result;
 
-			logger.Info($"Result loaded from '{filePath}'.");
+			logger.Info($"Результаты загружены из '{filePath}'.");
 		}
 		catch (Exception ex)
 		{
-			logger.Error($"Failed to load result from '{filePath}'.", ex);
+			logger.Error($"Ошибка загрузки результатов из '{filePath}'.", ex);
 			throw;
 		}
 	}
 
+	/// <summary>
+	/// Ensures the input configuration is consistent with the adjacency matrix.
+	/// </summary>
 	private static void ValidateConfig(FloydAlgorithmConfig config)
 	{
 		ArgumentNullException.ThrowIfNull(config.AdjacencyMatrix);
@@ -154,6 +186,9 @@ public sealed class FloydAlgorithmRunner(ILogger logger) : IAlgorithmRunner
 			throw new ArgumentOutOfRangeException(nameof(config.EndVertex));
 	}
 
+	/// <summary>
+	/// Converts a rectangular matrix to a jagged array for serialization.
+	/// </summary>
 	private static long?[][] ToJagged(long?[,] source)
 	{
 		var rows = source.GetLength(0);
@@ -202,6 +237,9 @@ public sealed class FloydAlgorithmRunner(ILogger logger) : IAlgorithmRunner
 		return result;
 	}
 
+	/// <summary>
+	/// Converts a jagged array back into a rectangular matrix after deserialization.
+	/// </summary>
 	private static long?[,] ToNullableRectangular(long?[][] source)
 	{
 		var rows = source.Length;
