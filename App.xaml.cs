@@ -1,5 +1,6 @@
 ﻿using System.IO;
 using System.Windows;
+using Visual_FloydWarshall.Algorithm;
 using Visual_FloydWarshall.Logging;
 
 namespace Visual_FloydWarshall
@@ -15,6 +16,8 @@ namespace Visual_FloydWarshall
         {
             base.OnStartup(e);
             _logger.Info("Приложение запущено.");
+
+            new MainWindow(new FloydAlgorithmRunner(_logger), _logger).Show();
         }
 
         protected override void OnExit(ExitEventArgs e)
