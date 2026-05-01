@@ -489,10 +489,17 @@ namespace Visual_FloydWarshall
 
 		private IReadOnlyList<int> GetFastestPath(int startVertex, int endVertex)
 		{
-			if (_algorithmRunner.CurrentResult is null)
+			if (_algorithmRunner.CurrentResult is null || _algorithmRunner.CurrentResult.HasNegativeCycle)
 				return [];
 
-			return _algorithmRunner.CurrentResult.RestorePath(startVertex, endVertex);
+			try
+			{
+				return _algorithmRunner.CurrentResult.RestorePath(startVertex, endVertex);
+			}
+			catch
+			{
+				return [];
+			}
 		}
 
 		private void UpdateLoopSliderBounds()
