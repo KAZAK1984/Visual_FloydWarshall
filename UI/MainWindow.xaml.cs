@@ -496,8 +496,9 @@ namespace Visual_FloydWarshall
 			{
 				return _algorithmRunner.CurrentResult.RestorePath(startVertex, endVertex);
 			}
-			catch
+			catch (Exception ex) when (ex is ArgumentOutOfRangeException or InvalidOperationException)
 			{
+				_logger.Error("Ошибка восстановления пути.", ex);
 				return [];
 			}
 		}

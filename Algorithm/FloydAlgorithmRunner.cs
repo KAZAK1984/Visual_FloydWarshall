@@ -117,9 +117,28 @@ public sealed class FloydAlgorithmRunner(ILogger logger) : IAlgorithmRunner
 				payload.AlgorithmName,
 				payload.Description);
 
+			try
+			{
+				ValidateConfig(config);
+			}
+			catch (ArgumentException ex)
+			{
+				throw new InvalidDataException($"File contains invalid configuration: {ex.Message}", ex);
+			}
+
+			var distances = ToRectangular(payload.Distances);
+			var predecessors = ToRectangular(payload.Predecessors);
+			var size = config.CollectionSize;
+
+			if (distances.GetLength(0) != size || distances.GetLength(1) != size)
+				throw new InvalidDataException($"Distances matrix dimensions ({distances.GetLength(0)}x{distances.GetLength(1)}) do not match collection size ({size}).");
+
+			if (predecessors.GetLength(0) != size || predecessors.GetLength(1) != size)
+				throw new InvalidDataException($"Predecessors matrix dimensions ({predecessors.GetLength(0)}x{predecessors.GetLength(1)}) do not match collection size ({size}).");
+
 			var result = new FloydWarshallResult(
-				ToRectangular(payload.Distances),
-				ToRectangular(payload.Predecessors),
+				distances,
+				predecessors,
 				payload.HasNegativeCycle,
 				[.. payload.IterationLogs
 					.Select(log => new FloydWarshallIterationLog(
