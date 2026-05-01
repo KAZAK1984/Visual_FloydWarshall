@@ -39,6 +39,9 @@ namespace Visual_FloydWarshall.Utility
 			return rows;
 		}
 
+		/// <summary>
+		/// Creates a randomized adjacency matrix for demo visualization.
+		/// </summary>
 		public static long?[,] BuildDefaultAdjacencyMatrix(int vertexCount)
 		{
 			var matrix = new long?[vertexCount, vertexCount];
@@ -71,7 +74,6 @@ namespace Visual_FloydWarshall.Utility
 		private static string FormatDistance(long distance) =>
 			distance >= FloydWarshallSolver.Inf ? "∞" : distance.ToString();
 	}
-
 	internal sealed record CalculationRow(
 		int Step,
 		int From,

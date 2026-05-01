@@ -86,19 +86,19 @@
 
                         <TextBlock TextWrapping="Wrap" Margin="5,5,5,2"> Узел отсчёта </TextBlock>
                         <TextBox x:Name="CalculateStartPos"
-                                 KeyDown="VertexSelection_KeyDown"
+                                 PreviewKeyDown="VertexSelection_KeyDown"
                                  TextWrapping="Wrap" Text="0" Margin="5,0,5,5" 
 								 util:TextBoxBehavior.NumericOnly="True"
 								 util:TextBoxBehavior.MinValue="0"
-								 util:TextBoxBehavior.MaxValue="{Binding Text, ElementName=VertexCountTextBox}"/>
+								 util:TextBoxBehavior.MaxValue="{Binding Text, ElementName=VertexCountTextBox, Converter={StaticResource SubtractOneConverter}}"/>
 
                         <TextBlock TextWrapping="Wrap" Margin="5,0,5,2"> Целевой узел </TextBlock>
                         <TextBox x:Name="CalculateEndPos"
-                                 KeyDown="VertexSelection_KeyDown"
+                                 PreviewKeyDown="VertexSelection_KeyDown"
                                  TextWrapping="Wrap" Text="1" Margin="5,0,5,5" 
 								 util:TextBoxBehavior.NumericOnly="True"
 								 util:TextBoxBehavior.MinValue="0"
-                                util:TextBoxBehavior.MaxValue="{Binding Text, ElementName=VertexCountTextBox, Converter={StaticResource SubtractOneConverter}}"/>
+								 util:TextBoxBehavior.MaxValue="{Binding Text, ElementName=VertexCountTextBox, Converter={StaticResource SubtractOneConverter}}"/>
                         
                     </StackPanel>
 				</Border>
@@ -166,13 +166,35 @@
 				<RowDefinition Height="*"/>
 			</Grid.RowDefinitions>
 
-          <Grid Grid.Row="0" Margin="5,5,5,2">
+			<Grid Grid.Row="0" Margin="5,5,5,2">
 				<Grid.ColumnDefinitions>
 					<ColumnDefinition Width="*"/>
 					<ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="0.2*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
 				</Grid.ColumnDefinitions>
+              
 				<TextBlock Grid.Column="0" VerticalAlignment="Center">Ручной выбор шага циклов</TextBlock>
-				<Button Grid.Column="1"
+
+                <TextBlock Grid.Column="1" VerticalAlignment="Center">Скорость авто-режима:</TextBlock>
+
+                <TextBox Grid.Column="2"
+                         x:Name="AutoSpeedTextBox"
+						 TextWrapping="Wrap" Text="500" Margin="5,0" 
+						 KeyDown="AutoSpeedTextBox_KeyDown"
+						 util:TextBoxBehavior.NumericOnly="True"
+						 util:TextBoxBehavior.MinValue="50"
+						 util:TextBoxBehavior.MaxValue="5000"/>
+
+                <Button Grid.Column="3"
+                        x:Name="AutoModeButton"
+                        Content="Авто: ВЫКЛ"
+						Padding="10,2"
+						Margin="8,0,0,0"
+						Click="AutoMod_Click"/>
+
+                <Button Grid.Column="4"
 						Content="Следующая операция (k,i,j)"
 						Padding="10,2"
 						Margin="8,0,0,0"
@@ -192,7 +214,8 @@
 						Maximum="0"
 						TickFrequency="1"
 						IsSnapToTickEnabled="True"
-						ValueChanged="LoopSlider_ValueChanged"/>
+                        ValueChanged="LoopSlider_ValueChanged"
+						PreviewMouseLeftButtonUp="LoopSlider_PreviewMouseLeftButtonUp"/>
 				<TextBlock Grid.Column="2" VerticalAlignment="Center" Margin="8,0,0,0" Text="{Binding Value, ElementName=LoopKSlider, StringFormat=F0}"/>
 			</Grid>
 
@@ -209,7 +232,8 @@
 						Maximum="0"
 						TickFrequency="1"
 						IsSnapToTickEnabled="True"
-						ValueChanged="LoopSlider_ValueChanged"/>
+                      ValueChanged="LoopSlider_ValueChanged"
+						PreviewMouseLeftButtonUp="LoopSlider_PreviewMouseLeftButtonUp"/>
 				<TextBlock Grid.Column="2" VerticalAlignment="Center" Margin="8,0,0,0" Text="{Binding Value, ElementName=LoopISlider, StringFormat=F0}"/>
 			</Grid>
 
@@ -226,7 +250,8 @@
 						Maximum="0"
 						TickFrequency="1"
 						IsSnapToTickEnabled="True"
-						ValueChanged="LoopSlider_ValueChanged"/>
+                        ValueChanged="LoopSlider_ValueChanged"
+						PreviewMouseLeftButtonUp="LoopSlider_PreviewMouseLeftButtonUp"/>
 				<TextBlock Grid.Column="2" VerticalAlignment="Center" Margin="8,0,0,0" Text="{Binding Value, ElementName=LoopJSlider, StringFormat=F0}"/>
 			</Grid>
 

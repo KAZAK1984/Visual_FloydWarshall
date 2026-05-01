@@ -7,6 +7,9 @@ namespace Visual_FloydWarshall.Rendering
 {
 	public static class DistanceMatrixRenderingFactory
 	{
+		/// <summary>
+		/// Builds distance matrix UI elements with highlights for the selected i/k/j triple.
+		/// </summary>
 		public static IReadOnlyList<UIElement> CreateSnapshotElements(
 			long[,]? distances,
 			int snapshotStep,
@@ -154,6 +157,9 @@ namespace Visual_FloydWarshall.Rendering
 		private static string FormatDistance(long distance) =>
 			distance >= FloydWarshallSolver.Inf ? "∞" : distance.ToString();
 
+		/// <summary>
+		/// Adds distances while preserving infinity semantics.
+		/// </summary>
 		private static long TrySumDistances(long left, long right)
 		{
 			if (left >= FloydWarshallSolver.Inf || right >= FloydWarshallSolver.Inf)

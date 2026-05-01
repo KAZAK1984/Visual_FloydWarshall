@@ -4,6 +4,9 @@ namespace Visual_FloydWarshall.Algorithm
 	{
 		public const long Inf = long.MaxValue / 2;
 
+		/// <summary>
+		/// Computes all-pairs shortest paths and optional iteration diagnostics.
+		/// </summary>
 		public static FloydWarshallResult Solve(long?[,] adjacencyMatrix, bool trackIterationChanges = false)
 		{
 			ArgumentNullException.ThrowIfNull(adjacencyMatrix);
@@ -87,6 +90,9 @@ namespace Visual_FloydWarshall.Algorithm
 				snapshots is null ? Array.Empty<FloydWarshallSnapshot>() : snapshots);
 		}
 
+		/// <summary>
+		/// Clones the distance matrix to freeze a snapshot for visualization.
+		/// </summary>
 		private static long[,] CloneDistances(long[,] source)
 		{
 			var size0 = source.GetLength(0);
@@ -104,6 +110,9 @@ namespace Visual_FloydWarshall.Algorithm
 			return clone;
 		}
 
+		/// <summary>
+		/// Initializes distance and predecessor matrices from the input graph.
+		/// </summary>
 		private static void InitializeMatrices(long?[,] adjacencyMatrix, long[,] distances, int[,] predecessors)
 		{
 			var vertexCount = adjacencyMatrix.GetLength(0);

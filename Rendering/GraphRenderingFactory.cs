@@ -12,6 +12,9 @@ namespace Visual_FloydWarshall.Rendering
 		const double layoutPadding = 45;
 		const double weightLabelSpacing = 4;
 
+		/// <summary>
+		/// Creates graph UI elements with highlights for the current step.
+		/// </summary>
 		public static IReadOnlyList<UIElement> CreateCircularGraphElements(
 			int vertexCount,
 			double canvasWidth,
@@ -223,6 +226,9 @@ namespace Visual_FloydWarshall.Rendering
 			return elements;
 		}
 
+		/// <summary>
+		/// Computes vertex layout points while trying to minimize edge crossings.
+		/// </summary>
 		private static Point[] CreateOptimizedLayoutPoints(int vertexCount, double canvasWidth, double canvasHeight, long?[,]? adjacencyMatrix)
 		{
 			var order = FindLowCrossingOrder(vertexCount, adjacencyMatrix);
@@ -247,6 +253,9 @@ namespace Visual_FloydWarshall.Rendering
 			return points;
 		}
 
+		/// <summary>
+		/// Finds a vertex ordering that reduces crossings in circular layout.
+		/// </summary>
 		private static int[] FindLowCrossingOrder(int vertexCount, long?[,]? adjacencyMatrix)
 		{
 			var edges = BuildEdges(vertexCount, adjacencyMatrix);
@@ -305,6 +314,9 @@ namespace Visual_FloydWarshall.Rendering
 			return edges;
 		}
 
+		/// <summary>
+		/// Counts edge crossings for a proposed vertex order.
+		/// </summary>
 		private static int CountCrossings(int[] order, IReadOnlyList<(int From, int To)> edges, int vertexCount)
 		{
 			var positions = new int[vertexCount];

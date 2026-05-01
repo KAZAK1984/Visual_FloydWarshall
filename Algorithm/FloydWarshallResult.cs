@@ -13,6 +13,9 @@ namespace Visual_FloydWarshall.Algorithm
 		public IReadOnlyList<FloydWarshallIterationLog> IterationLogs { get; } = iterationLogs;
 		public IReadOnlyList<FloydWarshallSnapshot> Snapshots { get; } = snapshots;
 
+		/// <summary>
+		/// Reconstructs a shortest path using the predecessor matrix.
+		/// </summary>
 		public IReadOnlyList<int> RestorePath(int startVertex, int endVertex)
 		{
 			var vertexCount = Distances.GetLength(0);
